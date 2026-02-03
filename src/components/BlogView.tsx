@@ -61,6 +61,22 @@ const BlogView = () => {
   const [postingComment, setPostingComment] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Manual refresh handler for comments (moved inside component, after id and setComments are defined)
+  const handleRefreshComments = async () => {
+    if (!id) return;
+
+    const { data: commentsData, error } = await supabase
+      .from("comments")
+      .select("*")
+      .eq("blog_id", id)
+      .order("created_at", { ascending: true });
+
+    if (!error) {
+      setComments(commentsData || []);
+    } else {
+      console.error("Failed to refresh comments:", error);
+    }
+  };
   useEffect(() => {
     const fetchBlog = async () => {
       // Fetch blog data including user_id and username for author checks and display
@@ -88,75 +104,44 @@ const BlogView = () => {
       } else {
         setComments(commentsData || []);
       }
-
-      // Real-time comments sync across all devices/users
-      useEffect(() => {
-        if (!id) return;
-
-        const channel = supabase
-          .channel(`comments-${id}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "comments",
-              filter: `blog_id=eq.${id}`,
-            },
-            async () => {
-              const { data, error } = await supabase
-                .from("comments")
-                .select("*")
-                .eq("blog_id", id)
-                .order("created_at", { ascending: true });
-
-              if (!error) {
-                setComments(data || []);
-              }
-            },
-          )
-          .subscribe();
-
-        return () => {
-          supabase.removeChannel(channel);
-        };
-      }, [id]);
-
-      useEffect(() => {
-        if (!id) return;
-
-        const channel = supabase
-          .channel("realtime-comments")
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "comments",
-              filter: `blog_id=eq.${id}`,
-            },
-            async () => {
-              // Re-fetch comments on any insert/update/delete
-              const { data, error } = await supabase
-                .from("comments")
-                .select("*")
-                .eq("blog_id", id)
-                .order("created_at", { ascending: true });
-
-              if (!error) {
-                setComments(data || []);
-              }
-            },
-          )
-          .subscribe();
-
-        return () => {
-          supabase.removeChannel(channel);
-        };
-      }, [id]);
     };
 
     fetchBlog();
+  }, [id]);
+
+  // Real-time comments sync across all devices/users (Supabase Realtime v2 Channel API)
+  useEffect(() => {
+    if (!id) return;
+
+    // Create a channel for this blog's comments
+    const channel = supabase
+      .channel(`realtime-comments-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "comments",
+          filter: `blog_id=eq.${id}`,
+        },
+        async () => {
+          // Re-fetch all comments ordered oldest -> newest
+          const { data: commentsData, error } = await supabase
+            .from("comments")
+            .select("*")
+            .eq("blog_id", id)
+            .order("created_at", { ascending: true });
+
+          if (!error) {
+            setComments(commentsData || []);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id]);
   /**
    * Deletes the blog, its image, and all related comment images.
@@ -527,6 +512,14 @@ const BlogView = () => {
             </div>
           ))}
           <div className="flex flex-col gap-2 mt-4">
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={handleRefreshComments}
+                className="px-3 py-1 text-sm rounded-md bg-gray-200 hover:bg-gray-300 transition"
+              >
+                Refresh Comments
+              </button>
+            </div>
             <textarea
               rows={3}
               placeholder="Write a comment..."
