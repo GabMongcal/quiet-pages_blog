@@ -88,6 +88,40 @@ const BlogView = () => {
       } else {
         setComments(commentsData || []);
       }
+
+      // Real-time comments sync across all devices/users
+      useEffect(() => {
+        if (!id) return;
+
+        const channel = supabase
+          .channel(`comments-${id}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "comments",
+              filter: `blog_id=eq.${id}`,
+            },
+            async () => {
+              const { data, error } = await supabase
+                .from("comments")
+                .select("*")
+                .eq("blog_id", id)
+                .order("created_at", { ascending: true });
+
+              if (!error) {
+                setComments(data || []);
+              }
+            },
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      }, [id]);
+
       useEffect(() => {
         if (!id) return;
 
