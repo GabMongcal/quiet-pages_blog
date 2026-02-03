@@ -62,6 +62,28 @@ const BlogList = () => {
     dispatch(fetchBlogs());
   }, [dispatch]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel("realtime-blogs")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "blogs",
+        },
+        () => {
+          // Re-fetch blogs on any insert/update/delete
+          dispatch(fetchBlogs());
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [dispatch]);
+
   /**
    * Deletes a blog and its associated image (if any),
    * then refreshes the blog list from Redux.
@@ -111,7 +133,13 @@ const BlogList = () => {
   // Pagination helpers
   const startIndex = (page - 1) * LIMIT;
   const endIndex = startIndex + LIMIT;
-  const paginatedBlogs = blogs.slice(startIndex, endIndex);
+
+  const sortedBlogs = [...blogs].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  );
+
+  const paginatedBlogs = sortedBlogs.slice(startIndex, endIndex);
   const totalPages = Math.ceil(blogs.length / LIMIT);
 
   return (

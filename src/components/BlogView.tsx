@@ -81,13 +81,45 @@ const BlogView = () => {
         .from("comments")
         .select("*")
         .eq("blog_id", id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
 
       if (commentsError) {
         console.error("Failed to fetch comments:", commentsError);
       } else {
         setComments(commentsData || []);
       }
+      useEffect(() => {
+        if (!id) return;
+
+        const channel = supabase
+          .channel("realtime-comments")
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "comments",
+              filter: `blog_id=eq.${id}`,
+            },
+            async () => {
+              // Re-fetch comments on any insert/update/delete
+              const { data, error } = await supabase
+                .from("comments")
+                .select("*")
+                .eq("blog_id", id)
+                .order("created_at", { ascending: true });
+
+              if (!error) {
+                setComments(data || []);
+              }
+            },
+          )
+          .subscribe();
+
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      }, [id]);
     };
 
     fetchBlog();
@@ -266,7 +298,7 @@ const BlogView = () => {
       .from("comments")
       .select("*")
       .eq("blog_id", id)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: true });
     if (commentsError) {
       console.error("Failed to fetch comments after adding:", commentsError);
     } else {
@@ -426,7 +458,7 @@ const BlogView = () => {
                                 .from("comments")
                                 .select("*")
                                 .eq("blog_id", id)
-                                .order("created_at", { ascending: false });
+                                .order("created_at", { ascending: true });
 
                             if (commentsError) {
                               console.error(
