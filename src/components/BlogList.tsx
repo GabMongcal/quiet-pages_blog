@@ -9,7 +9,7 @@ interface Blog {
   created_at: string;
   image_url?: string | null;
   user_id?: string | null;
-  username?: string | null; // Author's username
+  username?: string | null;
 }
 import { supabase } from "../supabaseClient";
 import { useEffect, useState } from "react";
@@ -20,11 +20,7 @@ import Navbar from "./Navbar";
 import { fetchBlogs } from "../slices/blogSlice";
 import type { RootState, AppDispatch } from "../store";
 
-/**
- * BlogList.tsx
- * ----------------
- * Displays a paginated list of blogs.
- * Blog data is fetched and cached using Redux Toolkit.
+/*Displays a paginated list of blogs.
  */
 const BlogList = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -39,7 +35,7 @@ const BlogList = () => {
   // Pagination (client-side for simplicity)
   const [page, setPage] = useState(1);
 
-  /**
+  /*
    * Stores the blog ID whose kebab menu is currently open.
    * Only one menu can be open at a time.
    */
@@ -78,7 +74,7 @@ const BlogList = () => {
     if (!confirmDelete) return;
 
     /**
-     * 1️⃣ If the blog has an image, remove it from Supabase Storage
+     * If the blog has an image, remove it from Supabase Storage
      */
     if (blog.image_url) {
       // Extract file path from public URL
@@ -180,7 +176,6 @@ const BlogList = () => {
               <div className="relative">
                 {/* 
                   Kebab button is now only visible if the logged-in user is the author of the blog.
-                  This hides the button completely for non-authors instead of just disabling the menu.
                 */}
                 {blog.user_id === currentUserId && (
                   <button

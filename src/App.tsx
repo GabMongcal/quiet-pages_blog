@@ -82,8 +82,13 @@ function App() {
           }
         />
 
-        {/* fallback */}
-        <Route path="*" element={<Login />} />
+        {/* fallback for unmatched routes: 
+            For Vercel and SPA deployments, ensure unmatched routes are handled via Navigate.
+        */}
+        <Route
+          path="*"
+          element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />}
+        />
       </Routes>
     </Router>
   );
