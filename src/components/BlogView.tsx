@@ -50,6 +50,16 @@ const BlogView = () => {
   );
 
   const [comment, setComment] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [editingImageFile, setEditingImageFile] = useState<File | null>(null);
+  const [editingImagePreview, setEditingImagePreview] = useState<string | null>(
+    null,
+  );
+  // Track which comment is being updated (for loading indicator)
+  const [updatingCommentId, setUpdatingCommentId] = useState<number | null>(
+    null,
+  );
   const [comments, setComments] = useState<Comment[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   // Preview URL of the selected comment image
@@ -143,10 +153,7 @@ const BlogView = () => {
       supabase.removeChannel(channel);
     };
   }, [id]);
-  /**
-   * Deletes the blog, its image, and all related comment images.
-   * This prevents orphan files in Supabase Storage.
-   */
+  /*Deletes the blog, its image, and all related comment images.*/
   const handleDelete = async () => {
     const confirmDelete = window.confirm("Delete this blog?");
     if (!confirmDelete || !blog) return;
@@ -205,9 +212,7 @@ const BlogView = () => {
       }
     }
 
-    /**
-     * 4️⃣ Delete the blog record (comments are deleted via FK or cascade)
-     */
+    /*Delete the blog record*/
     const { error } = await supabase.from("blogs").delete().eq("id", id);
 
     if (error) {
@@ -215,9 +220,7 @@ const BlogView = () => {
       return;
     }
 
-    /**
-     * 5️⃣ Navigate back to blog list after successful delete
-     */
+    /*Navigate back to blog list after successful delete*/
     navigate("/blogs");
   };
 
@@ -417,7 +420,175 @@ const BlogView = () => {
                 <div>
                   {/* Display the commenter's username above the comment content */}
                   <p className="text-sm font-semibold mb-1">{c.username}</p>
-                  <p className="text-sm text-gray-800">{c.content}</p>
+                  {editingCommentId === c.id ? (
+                    <>
+                      <textarea
+                        className="w-full border rounded-md p-2 text-sm"
+                        value={editingContent}
+                        onChange={(e) => setEditingContent(e.target.value)}
+                      />
+                      {/* Image upload for editing comment */}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const files = e.target.files;
+
+                          if (files && files.length > 0) {
+                            const file = files[0];
+                            setEditingImageFile(file);
+                            setEditingImagePreview(URL.createObjectURL(file));
+                          } else {
+                            // If user cleared the file input, reset preview and file
+                            setEditingImageFile(null);
+                            setEditingImagePreview(null);
+                          }
+                        }}
+                        className="block w-full text-sm text-gray-600
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-md file:border-0
+                file:text-sm file:font-medium
+                file:bg-gray-100 file:text-gray-700
+                hover:file:bg-gray-200
+                cursor-pointer"
+                      />
+
+                      {/* Case 1: Adding a new image to comment (originally no image) */}
+                      {editingImagePreview && !c.image_url && (
+                        <div className="mt-2">
+                          <img
+                            src={editingImagePreview}
+                            className="w-32 h-32 object-cover rounded-md cursor-pointer"
+                            onClick={() =>
+                              setLightboxImage(editingImagePreview)
+                            }
+                          />
+                        </div>
+                      )}
+                      {/* Case 2: Editing existing comment with previous image */}
+                      {editingImagePreview && c.image_url && (
+                        <div className="mt-2">
+                          <img
+                            src={editingImagePreview}
+                            className="w-32 h-32 object-cover rounded-md cursor-pointer"
+                            onClick={() =>
+                              setLightboxImage(editingImagePreview)
+                            }
+                          />
+                          <button
+                            className="mt-2 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md
+    bg-red-50 text-red-600 border border-red-200
+    hover:bg-red-100 hover:border-red-300
+    transition"
+                            onClick={() => {
+                              setEditingImagePreview(null);
+                              setEditingImageFile(null);
+                            }}
+                          >
+                            Delete image only
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          className="px-3 py-1 text-sm bg-black text-white rounded-md flex items-center gap-2"
+                          onClick={async () => {
+                            if (!editingContent.trim() && !editingImagePreview)
+                              return;
+                            setUpdatingCommentId(c.id); // start indicator
+                            let imageUrl = c.image_url;
+
+                            // If image removed
+                            if (!editingImagePreview && c.image_url) {
+                              const filePath =
+                                c.image_url.split("/comment-images/")[1];
+                              if (filePath) {
+                                await supabase.storage
+                                  .from("comment-images")
+                                  .remove([filePath]);
+                              }
+                              imageUrl = null;
+                            }
+
+                            // If new image uploaded
+                            if (editingImageFile) {
+                              if (c.image_url) {
+                                const oldFilePath =
+                                  c.image_url.split("/comment-images/")[1];
+                                if (oldFilePath) {
+                                  await supabase.storage
+                                    .from("comment-images")
+                                    .remove([oldFilePath]);
+                                }
+                              }
+
+                              const safeName = editingImageFile.name
+                                .replace(/\s+/g, "-")
+                                .replace(/[^a-zA-Z0-9.-]/g, "");
+                              const fileName = `${Date.now()}-${safeName}`;
+
+                              await supabase.storage
+                                .from("comment-images")
+                                .upload(fileName, editingImageFile, {
+                                  cacheControl: "3600",
+                                  upsert: true,
+                                  contentType: editingImageFile.type,
+                                });
+
+                              imageUrl = supabase.storage
+                                .from("comment-images")
+                                .getPublicUrl(fileName).data.publicUrl;
+                            }
+
+                            await supabase
+                              .from("comments")
+                              .update({
+                                content: editingContent,
+                                image_url: imageUrl,
+                              })
+                              .eq("id", c.id);
+
+                            // Refresh comments
+                            const { data } = await supabase
+                              .from("comments")
+                              .select("*")
+                              .eq("blog_id", id)
+                              .order("created_at", { ascending: true });
+                            setComments(data || []);
+
+                            // Reset states
+                            setEditingCommentId(null);
+                            setEditingImageFile(null);
+                            setEditingImagePreview(null);
+                            setUpdatingCommentId(null); // end indicator
+                          }}
+                        >
+                          {updatingCommentId === c.id ? (
+                            <>
+                              Saving...
+                              <span className="animate-spin h-4 w-4 border-2 border-white rounded-full"></span>
+                            </>
+                          ) : (
+                            "Save"
+                          )}
+                        </button>
+
+                        <button
+                          className="px-3 py-1 text-sm bg-gray-200 rounded-md"
+                          onClick={() => {
+                            setEditingCommentId(null);
+                            setEditingImageFile(null);
+                            setEditingImagePreview(null);
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-800">{c.content}</p>
+                  )}
                 </div>
 
                 {/* Kebab menu button for comment */}
@@ -438,6 +609,17 @@ const BlogView = () => {
                     {/* Kebab menu dropdown */}
                     {openCommentMenuId === c.id && (
                       <div className="absolute right-0 mt-2 w-32 bg-white border rounded-md shadow-lg z-20">
+                        <button
+                          className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                          onClick={() => {
+                            setEditingCommentId(c.id);
+                            setEditingContent(c.content);
+                            setEditingImagePreview(c.image_url);
+                            setOpenCommentMenuId(null);
+                          }}
+                        >
+                          Edit
+                        </button>
                         <button
                           className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600"
                           onClick={async () => {
@@ -501,7 +683,7 @@ const BlogView = () => {
                 )}
               </div>
 
-              {c.image_url && (
+              {editingCommentId !== c.id && c.image_url && (
                 <img
                   src={c.image_url}
                   alt="comment"
@@ -561,7 +743,8 @@ const BlogView = () => {
                 <img
                   src={commentImagePreview}
                   alt="comment preview"
-                  className="w-32 h-32 object-cover rounded-md"
+                  className="w-32 h-32 object-cover rounded-md cursor-pointer"
+                  onClick={() => setLightboxImage(commentImagePreview)}
                 />
               </div>
             )}
