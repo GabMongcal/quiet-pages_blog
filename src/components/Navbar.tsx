@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 const Navbar: React.FC = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   useEffect(() => {
     const getUser = async () => {
@@ -56,18 +55,18 @@ bg-black shadow-md border-b border-gray-700"
       </div>
       <div
         className={`${menuOpen ? "flex" : "hidden"} md:flex
-flex-col md:flex-row
-items-stretch md:items-center
-gap-2 md:gap-4
-mt-3 md:mt-0
-w-48 md:w-auto
-md:static
-absolute right-4 top-full
-bg-black md:bg-transparent
-p-3 md:p-0
-rounded-lg md:rounded-none
-shadow-lg md:shadow-none
-border border-gray-700 md:border-none`}
+                  flex-col md:flex-row
+                  items-stretch md:items-center
+                  gap-2 md:gap-4
+                  mt-3 md:mt-0
+                  w-48 md:w-auto
+                  md:static
+                  absolute right-4 top-full
+                  bg-black md:bg-transparent
+                  p-3 md:p-0
+                  rounded-lg md:rounded-none
+                  shadow-lg md:shadow-none
+                  border border-gray-700 md:border-none`}
       >
         {userEmail && (
           <span
