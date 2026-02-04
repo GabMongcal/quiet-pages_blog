@@ -44,6 +44,9 @@ const BlogList = () => {
   // Get the current logged-in user ID
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
+  // Lightbox state for full-view image modal
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchCurrentUser = async () => {
       const { data: userData } = await supabase.auth.getUser();
@@ -172,7 +175,8 @@ const BlogList = () => {
               <img
                 src={blog.image_url}
                 alt="blog"
-                className="w-48 h-48 object-cover rounded mb-2"
+                className="w-48 h-48 object-cover rounded mb-2 cursor-pointer"
+                onClick={() => setLightboxImage(blog.image_url ?? null)}
               />
             )}
 
@@ -274,6 +278,19 @@ const BlogList = () => {
           </div>
         )}
       </div>
+
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 cursor-zoom-out"
+          onClick={() => setLightboxImage(null)}
+        >
+          <img
+            src={lightboxImage}
+            alt="full-view"
+            className="max-w-[90%] max-h-[90%] rounded-lg shadow-xl"
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -17,6 +17,7 @@ const UpdateBlog = () => {
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   /**
    * Fetch existing blog data (title, content, image)
@@ -44,6 +45,7 @@ const UpdateBlog = () => {
 
   /**
    * Handle selecting a new image + preview
+   * If input is cleared, reset preview and file.
    */
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -53,6 +55,10 @@ const UpdateBlog = () => {
       // Preview selected image
       const previewUrl = URL.createObjectURL(file);
       setImagePreview(previewUrl);
+    } else {
+      // If file input cleared, reset preview and file
+      setNewImageFile(null);
+      setImagePreview(null);
     }
   };
 
@@ -119,6 +125,35 @@ const UpdateBlog = () => {
     }
   };
 
+  const handleDeleteImage = async () => {
+    if (!oldImageUrl) return;
+
+    setLoading(true);
+    try {
+      const fileName = oldImageUrl.split("/").pop();
+      if (!fileName) throw new Error("Invalid image URL");
+
+      // Delete from storage
+      const { error } = await supabase.storage
+        .from("blog-images")
+        .remove([fileName]);
+      if (error) throw error;
+
+      // Update blog record to remove image URL
+      await updateBlog(Number(id), title, content, null);
+
+      // Reset state
+      setOldImageUrl(null);
+      setNewImageFile(null);
+      setImagePreview(null);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete image");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -160,12 +195,22 @@ const UpdateBlog = () => {
               <p className="text-sm text-gray-600 mb-1">
                 {imagePreview ? "New image preview" : "Current image"}
               </p>
-              <div className="inline-block bg-white border border-gray-200 rounded-lg shadow-sm p-2">
+              <div className="flex flex-col items-start bg-transparent border border-transparent ">
                 <img
                   src={imagePreview || oldImageUrl!}
                   alt="preview"
-                  className="w-48 h-48 object-cover rounded-md"
+                  className="w-48 h-48 object-cover rounded-md cursor-pointer"
+                  onClick={() => setLightboxImage(imagePreview || oldImageUrl!)}
                 />
+                {oldImageUrl && !imagePreview && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteImage}
+                    className="mt-2 px-3 py-1 rounded-md bg-red-500 text-white hover:bg-red-600 transition"
+                  >
+                    Delete Image
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -199,6 +244,18 @@ const UpdateBlog = () => {
           </button>
         </form>
       </div>
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 cursor-zoom-out"
+          onClick={() => setLightboxImage(null)}
+        >
+          <img
+            src={lightboxImage}
+            alt="full-view"
+            className="max-w-[90%] max-h-[90%] rounded-lg shadow-xl"
+          />
+        </div>
+      )}
     </div>
   );
 };

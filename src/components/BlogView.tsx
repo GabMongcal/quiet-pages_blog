@@ -229,6 +229,10 @@ const BlogView = () => {
       // Create a local preview URL for the selected comment image
       const previewUrl = URL.createObjectURL(file);
       setCommentImagePreview(previewUrl);
+    } else {
+      // If input cleared, reset preview
+      setImageFile(null);
+      setCommentImagePreview(null);
     }
   };
 

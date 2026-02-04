@@ -11,6 +11,7 @@ const CreateBlog = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [username, setUsername] = useState<string>("");
   const [loading, setLoading] = useState(false); // loading state for upload
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   /**
@@ -46,6 +47,9 @@ const CreateBlog = () => {
       // Create a local preview URL
       const previewUrl = URL.createObjectURL(file);
       setImagePreview(previewUrl);
+    } else {
+      setImageFile(null);
+      setImagePreview(null);
     }
   };
 
@@ -180,7 +184,8 @@ const CreateBlog = () => {
                 <img
                   src={imagePreview}
                   alt="preview"
-                  className="w-56 h-56 object-cover rounded-md"
+                  className="w-56 h-56 object-cover rounded-md cursor-pointer"
+                  onClick={() => setLightboxImage(imagePreview)}
                 />
               </div>
             </div>
@@ -194,6 +199,19 @@ const CreateBlog = () => {
           </button>
         </form>
       </div>
+
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 cursor-zoom-out"
+          onClick={() => setLightboxImage(null)}
+        >
+          <img
+            src={lightboxImage}
+            alt="full-view"
+            className="max-w-[90%] max-h-[90%] rounded-lg shadow-xl"
+          />
+        </div>
+      )}
     </div>
   );
 };
