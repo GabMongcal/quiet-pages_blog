@@ -156,8 +156,10 @@ const UpdateBlog = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navbar />
-      <div className="max-w-3xl mx-auto p-6">
+      <div className="fixed top-0 left-0 w-full z-50">
+        <Navbar />
+      </div>
+      <div className="max-w-3xl mx-auto p-6 mt-18">
         {/* Back button */}
         <Link to="/blogs">
           <button className="mb-4 px-3 py-1 rounded-md bg-gray-200 hover:bg-gray-300 transition">

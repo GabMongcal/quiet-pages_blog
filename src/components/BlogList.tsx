@@ -146,10 +146,12 @@ const BlogList = () => {
   const totalPages = Math.ceil(blogs.length / LIMIT);
 
   return (
-    <div>
-      <Navbar />
+    <div className="mx-4 md:mx-16 lg:mx-40">
+      <div className="fixed top-0 left-0 w-full z-50">
+        <Navbar />
+      </div>
 
-      <div className="p-8">
+      <div className="p-8 pt-28">
         {/* Back to main page */}
         <Link to="/">
           <button className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 transition">
@@ -167,7 +169,10 @@ const BlogList = () => {
 
         {/* Blog cards */}
         {paginatedBlogs.map((blog) => (
-          <div key={blog.id} className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div
+            key={blog.id}
+            className="relative bg-white rounded-lg shadow-md p-4 md:p-6 mb-6"
+          >
             <h3 className="text-xl font-bold mb-2">{blog.title}</h3>
 
             {/* Optional blog image */}
@@ -175,7 +180,7 @@ const BlogList = () => {
               <img
                 src={blog.image_url}
                 alt="blog"
-                className="w-48 h-48 object-cover rounded mb-2 cursor-pointer"
+                className="w-full max-w-xs md:w-48 md:h-48 object-cover rounded mb-3 cursor-pointer"
                 onClick={() => setLightboxImage(blog.image_url ?? null)}
               />
             )}
@@ -193,7 +198,7 @@ const BlogList = () => {
             </p>
 
             {/* Actions */}
-            <div className="flex gap-2 mt-2">
+            <div className="flex flex-col sm:flex-row gap-2 mt-3">
               <button
                 onClick={() => {
                   setOpenMenuId(null);
@@ -205,7 +210,7 @@ const BlogList = () => {
               </button>
 
               {/* Kebab menu for edit/delete */}
-              <div className="relative">
+              <div className="absolute top-3 right-3">
                 {/* 
                   Kebab button is now only visible if the logged-in user is the author of the blog.
                 */}
@@ -214,7 +219,8 @@ const BlogList = () => {
                     onClick={() =>
                       setOpenMenuId(openMenuId === blog.id ? null : blog.id)
                     }
-                    className="px-2 py-1 text-2xl leading-none hover:bg-gray-200 rounded"
+                    className="px-3 py-2 text-xl leading-none hover:bg-gray-200 rounded-md touch-manipulation"
+                    aria-label="More options"
                   >
                     ⋮
                   </button>
@@ -222,7 +228,7 @@ const BlogList = () => {
 
                 {/* Kebab dropdown menu (shown only if current user is the author) */}
                 {openMenuId === blog.id && blog.user_id === currentUserId && (
-                  <div className="absolute right-0 mt-2 w-32 bg-white border rounded-md shadow-lg z-20">
+                  <div className="absolute right-0 top-full mt-2 w-36 bg-white border rounded-lg shadow-xl z-30">
                     <button
                       className="block w-full text-left px-4 py-2 hover:bg-gray-100"
                       onClick={() => navigate(`/blogs/${blog.id}/edit`)}
@@ -247,30 +253,30 @@ const BlogList = () => {
 
         {/* Pagination controls */}
         {totalPages > 1 && (
-          <div className="mt-8 flex justify-center items-center gap-6">
+          <div className="mt-10 flex flex-row justify-center items-center gap-3">
             <button
               disabled={page === 1}
               onClick={() => setPage(page - 1)}
-              className={`px-4 py-2 rounded ${
+              className={`px-5 py-2 rounded-full text-sm font-medium ${
                 page === 1
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-gray-200 hover:bg-gray-300"
+                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  : "bg-gray-100 hover:bg-gray-200"
               } transition`}
             >
               Prev
             </button>
 
-            <span>
+            <span className="text-sm text-gray-600 font-medium">
               Page {page} of {totalPages}
             </span>
 
             <button
               disabled={page === totalPages}
               onClick={() => setPage(page + 1)}
-              className={`px-4 py-2 rounded ${
+              className={`px-5 py-2 rounded-full text-sm font-medium ${
                 page === totalPages
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-gray-200 hover:bg-gray-300"
+                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  : "bg-gray-100 hover:bg-gray-200"
               } transition`}
             >
               Next
